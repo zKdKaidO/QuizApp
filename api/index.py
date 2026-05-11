@@ -1,7 +1,13 @@
-from flask import Flask, render_template, request, jsonify
+import os
 import re
+from flask import Flask, render_template, request, jsonify
 
-app = Flask(__name__)
+# 1. Xác định đường dẫn thư mục templates trước khi tạo app
+base_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(base_dir, '..', 'templates')
+
+# 2. Khởi tạo app MỘT LẦN DUY NHẤT
+app = Flask(__name__, template_folder=template_dir)
 
 def parse_quiz_text(raw_text):
     questions = []
@@ -18,10 +24,9 @@ def parse_quiz_text(raw_text):
         q_content = lines[0]
         options = []
         correct_ans = ""
-        is_mcq = False # Cờ kiểm tra xem có phải trắc nghiệm không
+        is_mcq = False 
         
         for line in lines[1:]:
-            # Regex nhận diện các lựa chọn A, B, C, D, E
             match = re.match(r'^(\*?)\s*([A-E])[\.\)]\s*(.*)', line)
             if match:
                 is_mcq = True
@@ -33,15 +38,11 @@ def parse_quiz_text(raw_text):
                 if is_correct:
                     correct_ans = label
             
-            # Nếu dòng bắt đầu bằng "Answer:", kiểm tra nếu chưa có correct_ans từ dấu *
             elif line.lower().startswith("answer:"):
                 ans_content = line.split(":", 1)[1].strip()
-                # Nếu Answer là một chữ cái đơn lẻ (A, B, C...)
                 if len(ans_content) == 1 and ans_content.upper() in "ABCDE":
                     correct_ans = ans_content.upper()
-                # Nếu là Answer dạng văn bản dài -> đây là câu tự luận, cờ is_mcq vẫn là False
         
-        # Chỉ thêm vào danh sách nếu là câu hỏi trắc nghiệm (có các option)
         if is_mcq and options:
             questions.append({
                 "question": q_content,
@@ -50,6 +51,7 @@ def parse_quiz_text(raw_text):
             })
     return questions
 
+# 3. Định nghĩa các Route
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -61,7 +63,4 @@ def generate():
     questions = parse_quiz_text(raw_text)
     return jsonify(questions)
 
-app = Flask(__name__, template_folder='../templates')
-
-if __name__ == '__main__':
-    app.run(debug=True)
+app = app
