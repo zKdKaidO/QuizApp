@@ -61,7 +61,7 @@ def generate():
     questions = parse_quiz_text(raw_text)
     return jsonify(questions)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../templates')
 
 if __name__ == '__main__':
     app.run(debug=True)
