@@ -274,15 +274,18 @@
         });
         const data = await res.json();
         
+        if(data.error) { alert(data.error); return; }
+
         questions = data.questions;
         document.getElementById('quizTitleDisplay').innerText = title;
         
+
         if(data.share_link) {
             document.getElementById('shareBox').style.display = 'block';
             document.getElementById('shareUrl').value = data.share_link;
         }
 
-        initQuizView();
+        initQuizView(); 
     }
 
     function initQuizView() {
