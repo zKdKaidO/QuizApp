@@ -1,6 +1,5 @@
 import os
 import re
-import uuid
 import json
 import random
 from flask import Flask, render_template, request, jsonify
@@ -11,10 +10,17 @@ template_dir = os.path.join(base_dir, '..', 'templates')
 
 app = Flask(__name__, template_folder=template_dir)
 
-# --- SUPABASE CONNECTION ---
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+# --- BỌC THÉP CHO SUPABASE CONNECTION ---
+# Dùng .strip() để diệt gọn khoảng trắng hay ngoặc kép rác do copy/paste
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().strip('"').strip("'")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
+
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"CRITICAL INIT ERROR - Lỗi khởi tạo Supabase: {e}")
 
 def parse_and_shuffle(raw_text):
     questions = []
@@ -59,13 +65,20 @@ def index():
 @app.route('/quiz/<quiz_id>')
 def view_quiz(quiz_id):
     if not supabase: return "Database not connected", 500
-    res = supabase.table("quizzes").select("questions").eq("id", quiz_id).maybe_single().execute()
-    if not res.data: return "Quiz not found", 404
-    return render_template('index.html', shared_data=json.dumps(res.data['questions']))
+    try:
+        res = supabase.table("quizzes").select("questions").eq("id", quiz_id).maybe_single().execute()
+        # Kiểm tra xem có data hay không, tránh lỗi NoneType
+        if not hasattr(res, 'data') or not res.data:
+            return "Quiz not found", 404
+        return render_template('index.html', shared_data=json.dumps(res.data['questions']))
+    except Exception as e:
+        print(f"VIEW ERROR: {e}")
+        return f"Server Error: {str(e)}", 500
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    data = request.json
+    # Thêm or {} để chống lỗi sập khi payload json bị trống
+    data = request.json or {}
     title = data.get('title', 'Untitled Quiz')
     questions = parse_and_shuffle(data.get('text', ''))
     
@@ -73,21 +86,31 @@ def generate():
 
     share_link = None
     if supabase:
-        # Tự động lưu vào Supabase ngay khi nhấn Build
-        res = supabase.table("quizzes").insert({
-            "title": title,
-            "questions": questions,
-            "author": "PHẠM NHẬT NAM"
-        }).execute()
-        if res.data:
-            share_link = f"{request.host_url}quiz/{res.data[0]['id']}"
+        try:
+            res = supabase.table("quizzes").insert({
+                "title": title,
+                "questions": questions,
+                "author": "PHẠM NHẬT NAM"
+            }).execute()
+            
+            if hasattr(res, 'data') and res.data:
+                share_link = f"{request.host_url}quiz/{res.data[0]['id']}"
+        except Exception as e:
+            # Ghi lỗi ra log Vercel chứ không làm sập web
+            print(f"INSERT ERROR: {e}")
 
     return jsonify({"questions": questions, "share_link": share_link})
 
 @app.route('/get-library', methods=['GET'])
 def get_library():
     if not supabase: return jsonify([])
-    res = supabase.table("quizzes").select("id, title, created_at").order("created_at", desc=True).limit(10).execute()
-    return jsonify(res.data)
+    try:
+        res = supabase.table("quizzes").select("id, title, created_at").order("created_at", desc=True).limit(10).execute()
+        if hasattr(res, 'data') and res.data:
+            return jsonify(res.data)
+        return jsonify([])
+    except Exception as e:
+        print(f"LIBRARY ERROR: {e}")
+        return jsonify([])
 
 app = app
