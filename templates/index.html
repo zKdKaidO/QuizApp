@@ -1,90 +1,247 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Q-Studio | Personal Platform</title>
+    <title>Q-Studio | Premium Quiz Experience</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        :root { --bg: #ffffff; --sidebar-bg: #ffffff; --text: #1a1a1a; --border: #f0f0f0; --accent: #000000; --correct: #27ae60; --wrong: #c0392b; }
-        * { font-family: 'Montserrat', sans-serif; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
-        body { background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        :root {
+            --bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --text: #000000;
+            --secondary-text: #999999;
+            --border: #f0f0f0;
+            --accent: #000000;
+            --hover-bg: #f9f9f9;
+            --correct: #27ae60;
+            --wrong: #c0392b;
+        }
 
-        /* SIDEBAR */
-        .sidebar { width: 260px; background: var(--sidebar-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 20; }
-        .sidebar-header { padding: 45px 25px 20px 25px; font-weight: 700; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2.5px; color: #aaa; }
-        .question-nav { padding: 10px 20px; overflow-y: auto; flex-grow: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; align-content: start; }
-        .nav-item { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.75rem; font-weight: 500; border-radius: 50%; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); background: #f9f9f9; color: #bbb; border: 1px solid transparent; }
-        .nav-item:hover { background: #000; color: #fff; }
+        * { 
+            font-family: 'Montserrat', sans-serif; 
+            box-sizing: border-box; 
+            -webkit-font-smoothing: antialiased; 
+        }
+
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            margin: 0; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
+
+        /* --- SIDEBARS (LEFT & RIGHT) --- */
+        .sidebar { 
+            width: 260px; 
+            background: var(--sidebar-bg); 
+            border-right: 1px solid var(--border); 
+            display: flex; 
+            flex-direction: column; 
+            z-index: 20; 
+        }
+        .sidebar-right { 
+            border-right: none; 
+            border-left: 1px solid var(--border); 
+        }
+
+        .sidebar-header { 
+            padding: 45px 25px 20px 25px; 
+            font-weight: 700; 
+            font-size: 0.65rem; 
+            text-transform: uppercase; 
+            letter-spacing: 2.5px; 
+            color: var(--secondary-text); 
+        }
+
+        /* Progress Dots */
+        .question-nav { 
+            padding: 10px 20px; 
+            overflow-y: auto; 
+            flex-grow: 1; 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 12px; 
+            align-content: start; 
+        }
+        
+        .nav-item { 
+            width: 34px; height: 34px; 
+            display: flex; align-items: center; justify-content: center; 
+            cursor: pointer; font-size: 0.75rem; font-weight: 500; 
+            border-radius: 50%; transition: all 0.25s ease;
+            background: #fdfdfd; color: #ccc; border: 1px solid #f0f0f0;
+        }
+        .nav-item:hover { background: #000; color: #fff; border-color: #000; }
         .nav-item.active { border: 1.5px solid #000; background: #fff; color: #000; }
-        .nav-item.answered { background: #1a1a1a; color: #fff; }
-        .sidebar-footer { padding: 25px; border-top: 1px solid var(--border); }
-        .btn-finalize { width: 100%; background: #000; color: #fff; border: none; padding: 15px; font-size: 0.7rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; cursor: pointer; transition: 0.3s; }
+        .nav-item.answered { background: #000; color: #fff; border-color: #000; }
 
-        /* MAIN CONTAINER */
-        .main-container { flex-grow: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
-        .top-bar { padding: 0 40px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; min-height: 70px; background: white; z-index: 10; position: sticky; top: 0; }
-        .quiz-content { max-width: 720px; margin: 50px auto; padding: 0 30px; width: 100%; }
-        h2 { font-weight: 800; font-size: 2.4rem; margin: 0 0 10px 0; letter-spacing: -2px; }
-        .subtitle { color: #999; font-size: 0.85rem; margin-bottom: 40px; }
-        textarea { width: 100%; height: 350px; border: 1px solid var(--border); padding: 25px; font-size: 0.95rem; line-height: 1.7; resize: none; margin-bottom: 20px; }
-        .mode-selector { display: flex; gap: 30px; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
-        .mode-option { cursor: pointer; opacity: 0.25; font-weight: 700; font-size: 0.8rem; letter-spacing: 1.5px; padding-bottom: 12px; }
-        .mode-option.active { opacity: 1; border-bottom: 2.5px solid var(--accent); }
-        .mode-info { font-size: 0.8rem; color: #777; margin-bottom: 35px; font-style: italic; }
+        /* Library List */
+        .library-list { padding: 0 20px; overflow-y: auto; flex-grow: 1; }
+        .library-item { 
+            padding: 15px 0; border-bottom: 1px solid #f9f9f9; 
+            cursor: pointer; transition: 0.2s; 
+        }
+        .library-item:hover .lib-title { text-decoration: underline; }
+        .lib-title { font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 4px; }
+        .lib-meta { font-size: 0.65rem; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* CARDS */
-        .question-card { margin-bottom: 70px; scroll-margin-top: 100px; }
-        .q-text { font-size: 1.25rem; font-weight: 700; margin-bottom: 30px; line-height: 1.5; }
-        .option { padding: 18px 25px; border: 1px solid var(--border); margin-bottom: 14px; cursor: pointer; border-radius: 6px; font-weight: 500; transition: 0.2s; }
-        .option:hover { border-color: #000; background: #fafafa; }
-        .option.selected { background: #f2f2f2; border-color: #000; font-weight: 600; }
-        .option.correct { color: white !important; background: var(--correct) !important; border-color: var(--correct) !important; }
-        .option.wrong { color: white !important; background: var(--wrong) !important; border-color: var(--wrong) !important; }
-        #scoreOverlay { display: none; text-align: center; padding: 80px 20px; }
-        .score-val { font-size: 6rem; font-weight: 800; letter-spacing: -4px; margin: 20px 0; }
+        /* --- MAIN CONTENT --- */
+        .main-container { 
+            flex-grow: 1; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            position: relative; 
+        }
+
+        .top-bar { 
+            padding: 0 40px; 
+            border-bottom: 1px solid var(--border); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            min-height: 80px; 
+            position: sticky; top: 0; background: white; z-index: 10; 
+        }
+
+        .quiz-content { max-width: 760px; margin: 60px auto; padding: 0 40px; width: 100%; }
+
+        h2 { font-weight: 800; font-size: 2.8rem; margin: 0 0 10px 0; letter-spacing: -2.5px; }
+        .subtitle { color: var(--secondary-text); font-size: 0.85rem; margin-bottom: 50px; letter-spacing: 0.5px; }
+
+        /* Forms & Inputs */
+        .input-group { margin-bottom: 25px; }
+        .label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: #bbb; margin-bottom: 10px; display: block; }
+        
+        input[type="text"], textarea { 
+            width: 100%; border: 1px solid var(--border); 
+            padding: 18px 25px; font-size: 0.95rem; line-height: 1.7; 
+            transition: 0.3s; background: #fdfdfd;
+        }
+        input[type="text"]:focus, textarea:focus { outline: none; border-color: #000; background: #fff; }
+        textarea { height: 320px; resize: none; }
+
+        /* Mode Selector */
+        .mode-selector { display: flex; gap: 40px; margin-bottom: 15px; border-bottom: 1px solid var(--border); }
+        .mode-option { cursor: pointer; opacity: 0.25; font-weight: 700; font-size: 0.8rem; letter-spacing: 2px; padding-bottom: 15px; transition: 0.3s; }
+        .mode-option.active { opacity: 1; border-bottom: 2.5px solid #000; }
+        .mode-info { font-size: 0.8rem; color: #888; margin-bottom: 40px; font-style: italic; }
+
+        /* Buttons */
+        .btn { 
+            background: #000; color: #fff; border: none; 
+            padding: 18px 35px; font-size: 0.75rem; font-weight: 700; 
+            letter-spacing: 2px; text-transform: uppercase; cursor: pointer; transition: 0.3s; 
+        }
+        .btn:hover { background: #333; letter-spacing: 3px; }
+        .btn-ghost { background: transparent; color: #000; border: 1px solid #000; }
+
+        /* Share Link Box */
+        #shareBox { 
+            display: none; background: #000; color: #fff; 
+            padding: 30px; border-radius: 2px; margin-bottom: 50px; 
+            animation: fadeIn 0.5s ease;
+        }
+        .share-header { font-size: 0.65rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; opacity: 0.6; margin-bottom: 15px; display: block; }
+        .share-input-wrap { display: flex; gap: 15px; }
+        #shareUrl { flex-grow: 1; background: #222; border: none; color: #fff; padding: 12px; font-size: 0.8rem; }
+
+        /* Question UI */
+        .question-card { margin-bottom: 80px; scroll-margin-top: 120px; }
+        .q-text { font-size: 1.4rem; font-weight: 700; margin-bottom: 35px; line-height: 1.4; color: #000; }
+        .option { 
+            padding: 20px 30px; border: 1px solid var(--border); 
+            margin-bottom: 15px; cursor: pointer; border-radius: 4px; 
+            transition: 0.2s ease; font-weight: 500; 
+        }
+        .option:hover { border-color: #000; background: var(--hover-bg); }
+        .option.selected { background: #000; color: #fff; border-color: #000; font-weight: 600; }
+        .option.correct { background: var(--correct) !important; color: #fff !important; border-color: var(--correct) !important; }
+        .option.wrong { background: var(--wrong) !important; color: #fff !important; border-color: var(--wrong) !important; }
+
+        #scoreOverlay { display: none; text-align: center; padding: 100px 20px; }
+        .score-val { font-size: 7rem; font-weight: 800; letter-spacing: -6px; margin: 20px 0; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-<div class="sidebar" id="sidebar" style="display:none;">
-    <div class="sidebar-header">Tracking Progress</div>
+<aside class="sidebar" id="progressSidebar" style="display:none;">
+    <div class="sidebar-header">Progress Tracking</div>
     <div class="question-nav" id="questionNav"></div>
-    <div class="sidebar-footer">
-        <button class="btn-finalize" id="submitAllBtn" onclick="submitQuiz()">Nộp bài ngay</button>
+    <div style="padding: 25px; border-top: 1px solid var(--border);">
+        <button class="btn" style="width: 100%; padding: 15px; font-size: 0.65rem;" id="submitAllBtn" onclick="submitQuiz()">Submit Quiz</button>
     </div>
-</div>
+</aside>
 
-<div class="main-container">
+<main class="main-container">
     <div class="top-bar" id="topBar" style="display:none;">
-        <div id="quizTimer" style="font-weight: 800; font-size: 1.2rem;">00:00</div>
-        <div id="quizModeIndicator" style="font-weight:700; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 2px; color: #bbb;"></div>
+        <div id="quizTimer" style="font-weight: 800; font-size: 1.3rem; letter-spacing: -1px;">00:00</div>
+        <div id="quizTitleDisplay" style="font-weight: 700; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; color: #bbb;">UNTITLED QUIZ</div>
     </div>
 
-    <div class="quiz-content" id="inputSection">
+    <section class="quiz-content" id="inputSection">
         <h2>Studio.</h2>
-        <p class="subtitle">Designed by PHẠM NHẬT NAM</p>
-        <div class="mode-selector">
-            <div class="mode-option active" onclick="setMode('practice', this)">PRACTICE</div>
-            <div class="mode-option" onclick="setMode('test', this)">TEST</div>
+        <p class="subtitle">PREMIUM ASSESSMENT ENGINE BY NAM</p>
+        
+        <div class="input-group">
+            <span class="label">Quiz Title</span>
+            <input type="text" id="quizTitle" placeholder="Enter a name for this session...">
         </div>
-        <div class="mode-info" id="modeInfo">Kết quả Đúng/Sai hiển thị ngay lập tức khi chọn.</div>
-        <textarea id="rawText" placeholder="Dán nội dung câu hỏi..."></textarea>
-        <button class="btn-finalize" onclick="generateQuiz()">Build Quiz</button>
-    </div>
 
-    <div class="quiz-content" id="quizArea" style="display:none;">
-        <div id="questionsContainer"></div>
-        <div id="scoreOverlay">
-            <h3 style="text-transform: uppercase; letter-spacing: 3px; font-size: 0.8rem; color: #aaa;">Final Grade</h3>
-            <span class="score-val" id="finalScore">0/10</span>
-            <p id="scoreDetail"></p>
-            <button class="btn-finalize" style="width:200px" onclick="location.href='/'">New Session</button>
+        <div class="input-group">
+            <span class="label">Selection Mode</span>
+            <div class="mode-selector">
+                <div class="mode-option active" id="btn-practice" onclick="setMode('practice', this)">PRACTICE</div>
+                <div class="mode-option" id="btn-test" onclick="setMode('test', this)">TEST</div>
+            </div>
+            <div class="mode-info" id="modeInfo">Real-time feedback: See results immediately after each selection.</div>
         </div>
+
+        <div class="input-group">
+            <span class="label">Questions Data</span>
+            <textarea id="rawText" placeholder="Paste your structured data here..."></textarea>
+        </div>
+
+        <button class="btn" onclick="generateQuiz()">Build Session</button>
+    </section>
+
+    <section class="quiz-content" id="quizArea" style="display:none;">
+        <div id="shareBox">
+            <span class="share-header">Success! Your Session is Live</span>
+            <div class="share-input-wrap">
+                <input type="text" id="shareUrl" readonly>
+                <button class="btn" style="background: #fff; color: #000; padding: 10px 20px;" onclick="copyLink()">COPY LINK</button>
+            </div>
+        </div>
+        
+        <div id="questionsContainer"></div>
+        
+        <div id="scoreOverlay">
+            <h3 style="text-transform: uppercase; letter-spacing: 4px; font-size: 0.8rem; color: #aaa;">Assessment Results</h3>
+            <span class="score-val" id="finalScore">0/10</span>
+            <p id="scoreDetail" style="color: #666; margin-bottom: 50px;"></p>
+            <button class="btn" style="width:240px" onclick="location.href='/'">Restart Studio</button>
+        </div>
+    </section>
+</main>
+
+<aside class="sidebar sidebar-right">
+    <div class="sidebar-header">Global Library</div>
+    <div class="library-list" id="libraryList">
+        <p style="font-size: 0.7rem; color: #eee; padding: 20px 0;">Syncing archives...</p>
     </div>
-</div>
+</aside>
+
+<script id="flaskData" type="application/json">{{ shared_data|safe }}</script>
 
 <script>
     let questions = [];
@@ -93,29 +250,50 @@
     let startTime;
     let timerInterval;
 
+    const descriptions = {
+        'practice': 'Real-time feedback: See results immediately after each selection.',
+        'test': 'Exam protocol: Final score and results will be calculated only after submission.'
+    };
+
     function setMode(mode, el) {
         currentMode = mode;
         document.querySelectorAll('.mode-option').forEach(o => o.classList.remove('active'));
         el.classList.add('active');
-        document.getElementById('modeInfo').innerText = mode === 'practice' ? 'Kết quả Đúng/Sai hiển thị ngay khi chọn.' : 'Kết quả chỉ hiển thị sau khi nộp bài.';
+        document.getElementById('modeInfo').innerText = descriptions[mode];
     }
 
     async function generateQuiz() {
         const text = document.getElementById('rawText').value;
+        const title = document.getElementById('quizTitle').value || 'Untitled Session';
         if(!text.trim()) return;
+
         const res = await fetch('/generate', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({text})
+            body: JSON.stringify({text, title})
         });
         const data = await res.json();
+        
         questions = data.questions;
+        document.getElementById('quizTitleDisplay').innerText = title;
+        
+        if(data.share_link) {
+            document.getElementById('shareBox').style.display = 'block';
+            document.getElementById('shareUrl').value = data.share_link;
+        }
+
+        initQuizView();
+    }
+
+    function initQuizView() {
         document.getElementById('inputSection').style.display = 'none';
-        document.getElementById('sidebar').style.display = 'flex';
+        document.getElementById('progressSidebar').style.display = 'flex';
         document.getElementById('topBar').style.display = 'flex';
         document.getElementById('quizArea').style.display = 'block';
         if(currentMode === 'practice') document.getElementById('submitAllBtn').style.display = 'none';
+        
         renderQuiz(); renderSidebar(); startTimer();
+        loadLibrary(); // Update library on save
     }
 
     function renderSidebar() {
@@ -147,11 +325,17 @@
         if (currentMode === 'practice' && qCard.classList.contains('answered')) return;
         userAnswers[qIdx] = label;
         document.getElementById(`nav-${qIdx}`).classList.add('answered');
+
         if (currentMode === 'practice') {
             qCard.classList.add('answered');
             const correct = questions[qIdx].answer;
             if (label === correct) optDiv.classList.add('correct');
-            else { optDiv.classList.add('wrong'); qCard.querySelectorAll('.option').forEach(o => { if(o.innerText.startsWith(correct)) o.classList.add('correct'); }); }
+            else {
+                optDiv.classList.add('wrong');
+                qCard.querySelectorAll('.option').forEach(o => {
+                    if(o.innerText.startsWith(correct + ".")) o.classList.add('correct');
+                });
+            }
         } else {
             qCard.querySelectorAll('.option').forEach(o => o.classList.remove('selected'));
             optDiv.classList.add('selected');
@@ -159,15 +343,40 @@
     }
 
     function submitQuiz() {
-        if(!confirm("Xác nhận nộp bài?")) return;
+        if(!confirm("Are you sure you want to finalize this session?")) return;
         clearInterval(timerInterval);
         let correctCount = 0;
         questions.forEach((q, i) => { if(userAnswers[i] === q.answer) correctCount++; });
+        
         document.getElementById('questionsContainer').style.display = 'none';
+        document.getElementById('shareBox').style.display = 'none';
         document.getElementById('scoreOverlay').style.display = 'block';
         document.getElementById('finalScore').innerText = `${((correctCount/questions.length)*10).toFixed(2)}/10`;
-        document.getElementById('scoreDetail').innerText = `Đúng ${correctCount}/${questions.length} câu.`;
+        document.getElementById('scoreDetail').innerText = `Achievement: ${correctCount} correct answers out of ${questions.length}.`;
         window.scrollTo(0,0);
+    }
+
+    async function loadLibrary() {
+        const res = await fetch('/get-library');
+        const data = await res.json();
+        const list = document.getElementById('libraryList');
+        if (data.length === 0) {
+            list.innerHTML = '<p style="font-size: 0.6rem; color: #ddd; padding-top: 20px;">ARCHIVES EMPTY</p>';
+            return;
+        }
+        list.innerHTML = data.map(item => `
+            <div class="library-item" onclick="location.href='/quiz/${item.id}'">
+                <span class="lib-title">${item.title || 'Untitled'}</span>
+                <span class="lib-meta">${new Date(item.created_at).toLocaleDateString()}</span>
+            </div>
+        `).join('');
+    }
+
+    function copyLink() {
+        const input = document.getElementById("shareUrl");
+        input.select();
+        document.execCommand("copy");
+        alert("Link copied to clipboard.");
     }
 
     function startTimer() {
@@ -180,17 +389,18 @@
         }, 1000);
     }
 
-    const shared = {{ shared_data|safe }};
-    if(shared && shared !== null) {
-        questions = shared;
-        window.onload = () => {
-            document.getElementById('inputSection').style.display = 'none';
-            document.getElementById('sidebar').style.display = 'flex';
-            document.getElementById('topBar').style.display = 'flex';
-            document.getElementById('quizArea').style.display = 'block';
-            renderQuiz(); renderSidebar(); startTimer();
-        };
-    }
+    // Handle Shared Data
+    try {
+        const raw = document.getElementById('flaskData').textContent;
+        const shared = (raw && raw !== 'null') ? JSON.parse(raw) : null;
+        if(shared) {
+            questions = shared;
+            currentMode = 'test';
+            window.addEventListener('DOMContentLoaded', initQuizView);
+        }
+    } catch(e) {}
+
+    window.onload = loadLibrary;
 </script>
 </body>
 </html>
