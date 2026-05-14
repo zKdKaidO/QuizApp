@@ -1,6 +1,5 @@
 import os
 import re
-import uuid
 import json
 import random
 from flask import Flask, render_template, request, jsonify
@@ -11,10 +10,17 @@ template_dir = os.path.join(base_dir, '..', 'templates')
 
 app = Flask(__name__, template_folder=template_dir)
 
-# --- SUPABASE CONNECTION ---
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+# --- BỌC THÉP CHO SUPABASE ---
+# Lệnh strip() loại bỏ mọi khoảng trắng hay ngoặc kép thừa gây lỗi sập Vercel
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip().strip('"').strip("'")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip().strip('"').strip("'")
+
+supabase: Client = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"CRITICAL INIT ERROR: {e}")
 
 def parse_and_shuffle(raw_text):
     questions = []
@@ -42,9 +48,7 @@ def parse_and_shuffle(raw_text):
                 idx = ord(ans_label) - 65
                 if 0 <= idx < len(opts_raw): opts_raw[idx]['correct'] = True
             
-            # --- CODE CŨ: Xáo trộn vị trí các đáp án A, B, C, D ---
             random.shuffle(opts_raw)
-            
             final_opts = []
             new_ans = ""
             for i, o in enumerate(opts_raw):
@@ -53,8 +57,7 @@ def parse_and_shuffle(raw_text):
                 if o["correct"]: new_ans = lbl
             questions.append({"question": q_text, "options": final_opts, "answer": new_ans})
     
-    # --- TÍNH NĂNG MỚI ĐƯỢC THÊM VÀO ĐÂY ---
-    # Xáo trộn toàn bộ danh sách các câu hỏi trước khi trả về cho Frontend
+    # Xáo trộn vị trí các câu hỏi
     if questions:
         random.shuffle(questions)
         
@@ -67,35 +70,54 @@ def index():
 @app.route('/quiz/<quiz_id>')
 def view_quiz(quiz_id):
     if not supabase: return "Database not connected", 500
-    res = supabase.table("quizzes").select("questions").eq("id", quiz_id).maybe_single().execute()
-    if not res.data: return "Quiz not found", 404
-    return render_template('index.html', shared_data=json.dumps(res.data['questions']))
+    try:
+        res = supabase.table("quizzes").select("questions").eq("id", quiz_id).maybe_single().execute()
+        if not hasattr(res, 'data') or not res.data:
+            return "Quiz not found", 404
+        return render_template('index.html', shared_data=json.dumps(res.data['questions']))
+    except Exception as e:
+        return f"Server Error: {str(e)}", 500
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    data = request.json
-    title = data.get('title', 'Untitled Quiz')
+    data = request.json or {}
     questions = parse_and_shuffle(data.get('text', ''))
-    
     if not questions: return jsonify({"error": "No questions found"}), 400
+    
+    # Chỉ trả về để preview, chưa lưu vào Database
+    return jsonify({"questions": questions})
 
-    share_link = None
-    if supabase:
-        # Tự động lưu vào Supabase ngay khi nhấn Build
+@app.route('/save-quiz', methods=['POST'])
+def save_quiz():
+    data = request.json or {}
+    title = data.get('title', 'Untitled Quiz')
+    questions = data.get('questions', [])
+    
+    if not supabase: return jsonify({"error": "Supabase not connected"}), 500
+    if not questions: return jsonify({"error": "No questions to save"}), 400
+    
+    try:
         res = supabase.table("quizzes").insert({
             "title": title,
             "questions": questions,
             "author": "PHẠM NHẬT NAM"
         }).execute()
-        if res.data:
+        
+        if hasattr(res, 'data') and res.data:
             share_link = f"{request.host_url}quiz/{res.data[0]['id']}"
-
-    return jsonify({"questions": questions, "share_link": share_link})
+            return jsonify({"success": True, "share_link": share_link})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/get-library', methods=['GET'])
 def get_library():
     if not supabase: return jsonify([])
-    res = supabase.table("quizzes").select("id, title, created_at").order("created_at", desc=True).limit(10).execute()
-    return jsonify(res.data)
+    try:
+        res = supabase.table("quizzes").select("id, title, created_at").order("created_at", desc=True).limit(15).execute()
+        if hasattr(res, 'data') and res.data:
+            return jsonify(res.data)
+        return jsonify([])
+    except Exception:
+        return jsonify([])
 
 app = app

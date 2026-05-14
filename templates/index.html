@@ -215,6 +215,11 @@
     </section>
 
     <section class="quiz-content" id="quizArea" style="display:none;">
+        <div id="savePromptBox" style="background: #fdfdfd; padding: 25px; text-align: center; margin-bottom: 30px; border: 1px solid var(--border); border-radius: 4px;">
+            <p style="font-size: 0.8rem; font-weight: 600; margin-bottom: 15px; color: #333;">Session built successfully. Do you want to save this to the Global Library and generate a share link?</p>
+            <button class="btn" style="background: #27ae60;" onclick="saveQuizToDB()">SAVE & GET LINK</button>
+        </div>
+
         <div id="shareBox">
             <span class="share-header">Success! Your Session is Live</span>
             <div class="share-input-wrap">
@@ -279,13 +284,32 @@
         questions = data.questions;
         document.getElementById('quizTitleDisplay').innerText = title;
         
+        // Hiện giao diện, ẩn nút Lưu nếu là học viên đang làm bài qua link chia sẻ
+        document.getElementById('shareBox').style.display = 'none';
+        document.getElementById('savePromptBox').style.display = 'block';
+        initQuizView(); 
+    }
 
-        if(data.share_link) {
+    async function saveQuizToDB() {
+        const title = document.getElementById('quizTitle').value || 'Untitled Session';
+        document.getElementById('savePromptBox').innerHTML = "<p>Saving to Supabase...</p>";
+
+        const res = await fetch('/save-quiz', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ title: title, questions: questions })
+        });
+        const data = await res.json();
+
+        if(data.success) {
+            document.getElementById('savePromptBox').style.display = 'none';
             document.getElementById('shareBox').style.display = 'block';
             document.getElementById('shareUrl').value = data.share_link;
+            loadLibrary(); // Tự động load lại danh sách bên phải
+        } else {
+            alert("Lỗi lưu dữ liệu: " + data.error);
+            document.getElementById('savePromptBox').style.display = 'none';
         }
-
-        initQuizView(); 
     }
 
     function initQuizView() {
