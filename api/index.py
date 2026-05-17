@@ -28,7 +28,11 @@ if SUPABASE_URL and SUPABASE_KEY:
 
 def parse_and_shuffle(raw_text):
     questions = []
-    blocks = re.split(r'(?:Câu\s*\d+[:\.]|\d+[\)\.])', raw_text)
+    
+    # SỬA LỖI 1: Chỉ tách câu khi đầu dòng bắt đầu bằng "Câu X:" hoặc "X." 
+    # (Đã loại bỏ việc nhận diện dấu đóng ngoặc ')' để không bị cắt bậy)
+    blocks = re.split(r'(?m)^(?:Câu\s*\d+[:\.]|\d+[\.\:])', raw_text)
+    
     for block in blocks:
         block = block.strip()
         if not block: continue
@@ -39,7 +43,9 @@ def parse_and_shuffle(raw_text):
         is_mcq = False
         ans_label = ""
         for line in lines[1:]:
-            m = re.match(r'^(\*?)\s*([A-E])[\.\)]\s*(.*)', line)
+            # SỬA LỖI 2: Ép buộc định dạng đáp án phải là A. hoặc *A. 
+            # (Không còn dùng [A-E]\) nữa)
+            m = re.match(r'^(\*?)\s*([A-E])\.\s*(.*)', line)
             if m:
                 is_mcq = True
                 opts_raw.append({"text": m.group(3), "correct": (m.group(1) == '*')})
@@ -108,7 +114,6 @@ def get_library():
     except Exception as e:
         return jsonify([])
 
-# --- TÍNH NĂNG MỚI 1: XÓA QUÍZ ---
 @app.route('/delete-quiz/<quiz_id>', methods=['DELETE'])
 def delete_quiz(quiz_id):
     if not supabase: return jsonify({"error": "Database not connected"}), 500
@@ -122,7 +127,6 @@ def delete_quiz(quiz_id):
 def view_quiz(quiz_id):
     if not supabase: return "Database not connected", 500
     try:
-        # TÍNH NĂNG MỚI: Lấy cả Title để hiển thị cho đẹp
         res = supabase.table("quizzes").select("title, questions").eq("id", quiz_id).maybe_single().execute()
         if not hasattr(res, 'data') or not res.data: return "Quiz not found", 404
         
